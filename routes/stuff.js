@@ -10,7 +10,7 @@ const multer = require("../middleware/multer-config");
 router.post("/", auth, multer, stuffCtrl.createBook);
 router.put("/:id", auth, multer, stuffCtrl.modifyBook);
 router.delete("/:id", auth, stuffCtrl.deleteBook);
-router.get("/:id", auth, stuffCtrl.getOneBook);
-router.get("/", auth, stuffCtrl.getAllBooks);
+router.get("/:id", stuffCtrl.getOneBook);
+router.get("/", stuffCtrl.getAllBooks);
 
 module.exports = router;
