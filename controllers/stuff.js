@@ -79,3 +79,60 @@ exports.getAllBooks = (req, res, next) => {
         .then((books) => res.status(200).json(books))
         .catch((error) => res.status(400).json({ error }));
 };
+
+async function calculerMoyenne(bookId) {
+    const resultat = await Book.aggregate([
+        { $match: { _id: bookId } },
+        { $unwind: "$ratings" },
+        {
+            $group: {
+                _id: "$_id",
+                averageRating: { $avg: "$ratings.grade" },
+            },
+        },
+    ]);
+    return resultat.length > 0 ? resultat[0].averageRating : 0;
+}
+
+exports.ajoutNote = (req, res, next) => {
+    Book.findOne({ _id: req.params.id })
+        .then((book) => {
+            const noteExistante = book.ratings.find((note) => note.userId === req.auth.userId);
+            if (noteExistante) {
+                res.status(400).json({ message: "Not authorized" });
+            } else {
+                book.ratings.push({
+                    userId: req.auth.userId,
+                    grade: req.body.grade,
+                });
+                book.save()
+                    .then(async () => {
+                        const moyenne = await calculerMoyenne(req.params.id);
+                        return Book.findByIdAndUpdate(req.params.id, { averageRating: moyenne });
+                    })
+                    .then(() => {
+                        res.status(201).json({ message: "Note ajoutée" });
+                    })
+                    .catch((error) => {
+                        res.status(400).json({ error });
+                    });
+            }
+        })
+        .catch((error) => {
+            res.status(500).json({ error });
+        });
+};
+
+function meilleursLivres() {
+    return Book.find().sort({ averageRating: -1, title: 1 }).limit(3);
+}
+
+exports.BestRating = (req, res, next) => {
+    meilleursLivres()
+        .then((books) => {
+            res.status(200).json(books);
+        })
+        .catch((error) => {
+            res.status(500).json({ error });
+        });
+};
