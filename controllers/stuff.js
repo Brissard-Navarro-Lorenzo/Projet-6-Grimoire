@@ -127,7 +127,7 @@ function meilleursLivres() {
     return Book.find().sort({ averageRating: -1, title: 1 }).limit(3);
 }
 
-exports.BestRating = (req, res, next) => {
+exports.meilleuresMoyennes = (req, res, next) => {
     meilleursLivres()
         .then((books) => {
             res.status(200).json(books);
