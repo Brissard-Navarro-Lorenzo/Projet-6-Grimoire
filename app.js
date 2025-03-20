@@ -3,7 +3,6 @@ const mongoose = require("mongoose");
 const stuffRoutes = require("./routes/stuff");
 const userRoutes = require("./routes/user");
 const path = require("path");
-
 const app = express();
 
 // Logique pour se connecter à MongoDB

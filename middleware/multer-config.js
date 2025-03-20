@@ -1,4 +1,7 @@
 const multer = require("multer");
+const sharp = require("sharp");
+const path = require("path");
+const fs = require("fs");
 
 const MIME_TYPES = {
     "image/jpg": "jpg",
@@ -6,21 +9,29 @@ const MIME_TYPES = {
     "image/png": "png",
 };
 
-const storage = multer.diskStorage({
-    destination: (req, file, callback) => {
-        callback(null, "images");
-    },
-    filename: (req, file, callback) => {
-        // const name = file.originalname.split(" ").join("_");
+// Stocker l'image en mémoire avec Multer
+const storage = multer.memoryStorage();
+const upload = multer({ storage }).single("image");
 
-        // const name = file.originalname.split(/[ .]/).join("_");
-        // const extension = MIME_TYPES[file.mimetype];
-        // callback(null, name + Date.now() + "." + extension);
-        const extension = "." + MIME_TYPES[file.mimetype];
-        const name = file.originalname.split(" ").join("_");
-        const name_final = name.split(extension);
-        callback(null, name_final[0] + Date.now() + extension);
-    },
-});
+const optimisationImage = async (req, res, next) => {
+    try {
+        const extension = "." + MIME_TYPES[req.file.mimetype];
+        const name = req.file.originalname.split(" ").join("_");
+        const name_final = name.split(extension)[0];
+        const filename = name_final + Date.now() + ".webp";
 
-module.exports = multer({ storage: storage }).single("image");
+        fs.access(path.join(__dirname, "../images"), (error) => {
+            if (error) {
+                fs.mkdirSync(path.join(__dirname, "../images"));
+            }
+        });
+
+        await sharp(req.file.buffer).webp({ quality: 20 }).toFile(path.join(__dirname, "../images", filename));
+        req.file.filename = filename;
+        next();
+    } catch (error) {
+        res.status(500).json({ error });
+    }
+};
+
+module.exports = { upload, optimisationImage };
