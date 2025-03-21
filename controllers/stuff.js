@@ -1,5 +1,6 @@
 const Book = require("../models/Book");
 const fs = require("fs");
+const mongoose = require("mongoose");
 
 exports.createBook = (req, res, next) => {
     const bookObject = JSON.parse(req.body.book);
@@ -91,7 +92,7 @@ exports.getAllBooks = (req, res, next) => {
 
 async function calculerMoyenne(bookId) {
     const resultat = await Book.aggregate([
-        { $match: { _id: bookId } },
+        { $match: { _id: new mongoose.Types.ObjectId(bookId) } },
         { $unwind: "$ratings" },
         {
             $group: {
@@ -99,8 +100,18 @@ async function calculerMoyenne(bookId) {
                 averageRating: { $avg: "$ratings.grade" },
             },
         },
+        {
+            $project: {
+                _id: 1,
+                averageRating: { $round: ["$averageRating", 1] }, // arrondi à 1 décimal
+            },
+        },
     ]);
-    return resultat.length > 0 ? resultat[0].averageRating : 0;
+    if (resultat.length > 0) {
+        return resultat[0].averageRating;
+    } else {
+        return 0;
+    }
 }
 
 exports.ajoutNote = (req, res, next) => {
@@ -109,21 +120,22 @@ exports.ajoutNote = (req, res, next) => {
             const noteExistante = book.ratings.find((note) => note.userId === req.auth.userId);
             if (noteExistante) {
                 res.status(400).json({ message: "Not authorized" });
+                console.log("problème de login");
             } else {
                 book.ratings.push({
                     userId: req.auth.userId,
-                    grade: req.body.grade,
+                    grade: req.body.rating,
                 });
                 book.save()
                     .then(async () => {
                         const moyenne = await calculerMoyenne(req.params.id);
-                        return Book.findByIdAndUpdate(req.params.id, { averageRating: moyenne });
-                    })
-                    .then(() => {
-                        res.status(201).json({ message: "Note ajoutée" });
+                        const livreModif = await Book.findByIdAndUpdate(req.params.id, { averageRating: moyenne }, { new: true });
+                        // const livreModif = await Book.findById(req.params.id);
+                        res.status(201).json(livreModif);
                     })
                     .catch((error) => {
                         res.status(400).json({ error });
+                        console.log("problème après sauvegarde");
                     });
             }
         })
