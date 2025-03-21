@@ -15,6 +15,10 @@ const upload = multer({ storage }).single("image");
 
 const optimisationImage = async (req, res, next) => {
     try {
+        if (!req.file) {
+            return next();
+        }
+
         const extension = "." + MIME_TYPES[req.file.mimetype];
         const name = req.file.originalname.split(" ").join("_");
         const name_final = name.split(extension)[0];
