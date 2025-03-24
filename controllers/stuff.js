@@ -103,7 +103,7 @@ async function calculerMoyenne(bookId) {
         {
             $project: {
                 _id: 1,
-                averageRating: { $round: ["$averageRating", 1] }, // arrondi à 1 décimal
+                averageRating: { $round: ["$averageRating", 1] },
             },
         },
     ]);
@@ -120,7 +120,6 @@ exports.ajoutNote = (req, res, next) => {
             const noteExistante = book.ratings.find((note) => note.userId === req.auth.userId);
             if (noteExistante) {
                 res.status(400).json({ message: "Not authorized" });
-                console.log("problème de login");
             } else {
                 book.ratings.push({
                     userId: req.auth.userId,
@@ -130,12 +129,10 @@ exports.ajoutNote = (req, res, next) => {
                     .then(async () => {
                         const moyenne = await calculerMoyenne(req.params.id);
                         const livreModif = await Book.findByIdAndUpdate(req.params.id, { averageRating: moyenne }, { new: true });
-                        // const livreModif = await Book.findById(req.params.id);
                         res.status(201).json(livreModif);
                     })
                     .catch((error) => {
                         res.status(400).json({ error });
-                        console.log("problème après sauvegarde");
                     });
             }
         })
